@@ -20,8 +20,6 @@
     IN THE SOFTWARE.
 */
 
-#if !defined NN_HAVE_WINDOWS
-
 #include "bipc.h"
 #include "aipc.h"
 
@@ -35,8 +33,12 @@
 #include "../../utils/fast.h"
 
 #include <string.h>
+#if defined NN_HAVE_WINDOWS
+#include "../../utils/win.h"
+#else
 #include <unistd.h>
 #include <sys/un.h>
+#endif
 
 #define NN_BIPC_BACKLOG 10
 
@@ -280,6 +282,7 @@ static void nn_bipc_handler (struct nn_fsm *self, int src, int type,
 
 static void nn_bipc_start_listening (struct nn_bipc *self)
 {
+#if !defined NN_HAVE_WINDOWS
     int rc;
     struct sockaddr_storage ss;
     struct sockaddr_un *un;
@@ -307,6 +310,7 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
     errnum_assert (rc == 0, -rc);
     rc = nn_usock_listen (&self->usock, NN_BIPC_BACKLOG);
     errnum_assert (rc == 0, -rc);
+#endif
 }
 
 static void nn_bipc_start_accepting (struct nn_bipc *self)
@@ -321,6 +325,3 @@ static void nn_bipc_start_accepting (struct nn_bipc *self)
     /*  Start waiting for a new incoming connection. */
     nn_aipc_start (self->aipc, &self->usock);
 }
-
-#endif
-
