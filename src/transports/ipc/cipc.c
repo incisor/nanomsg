@@ -381,7 +381,9 @@ static void nn_cipc_handler (struct nn_fsm *self, int src, int type,
 
 static void nn_cipc_start_connecting (struct nn_cipc *self)
 {
-#if !defined NN_HAVE_WINDOWS
+#if defined NN_HAVE_WINDOWS
+	nn_assert( TRUE );
+#else
     int rc;
     struct sockaddr_storage ss;
     struct sockaddr_un *un;

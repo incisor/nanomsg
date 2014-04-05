@@ -282,7 +282,69 @@ static void nn_bipc_handler (struct nn_fsm *self, int src, int type,
 
 static void nn_bipc_start_listening (struct nn_bipc *self)
 {
-#if !defined NN_HAVE_WINDOWS
+#if defined NN_HAVE_WINDOWS
+	const char *addr;
+	const char *win_name;
+
+	// TODO: transform the name
+	// http://msdn.microsoft.com/en-us/library/windows/desktop/aa365783(v=vs.85).aspx
+	addr = nn_epbase_getaddr (&self->epbase);
+	win_name = "\\\\.\\pipe\\test.ipc";
+
+	// nn_usock_start replacement:
+
+	{
+		HANDLE instance;
+		HANDLE cp;
+		struct nn_worker *worker;
+
+		// TODO: expose custom nOutBufferSize, nInBufferSize, nDefaultTimeOut, lpSecurityAttributes
+		// NOTE: FILE_FLAG_OVERLAPPED + PIPE_WAIT: http://blogs.msdn.com/b/oldnewthing/archive/2011/01/14/10115610.aspx?Redirected=true
+		instance = CreateNamedPipeA ( win_name, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, NULL );
+		// TODO: error reporting
+		nn_assert (instance != INVALID_HANDLE_VALUE);
+		// FIXME: abuse. Since SOCKETs are HANDLEs, should we change the type to a HANDLE instead?
+		self->usock.s = (SOCKET)instance;
+
+		/*  Associate the socket with a worker thread/completion port. */
+		worker = nn_fsm_choose_worker (&self->usock.fsm);
+		cp = CreateIoCompletionPort ((HANDLE) self->usock.s,
+			nn_worker_getcp (worker), (ULONG_PTR) NULL, 0);
+		nn_assert (cp);
+
+		// TODO: should something else be setup here?
+		self->usock.domain = -1;
+		self->usock.type = -1;
+		self->usock.protocol = -1;
+
+		/*  Start the state machine. */
+		nn_fsm_start (&self->usock.fsm);
+	}
+
+	// nn_usock_bind: no equivalent
+
+	// nn_usock_listen replacement:
+	{
+		OVERLAPPED olpd;
+		BOOL connect_ret;
+		DWORD err;
+
+		// http://msdn.microsoft.com/en-us/library/windows/desktop/aa365146(v=vs.85).aspx
+		// NOTE: not setting up a 'manual reset' event
+		memset (&olpd, 0, sizeof(OVERLAPPED));
+		connect_ret = ConnectNamedPipe ((HANDLE) self->usock.s, &olpd);
+		nn_assert (connect_ret == FALSE); // Asynchronous: always returns 0
+		err = GetLastError();
+		// NOTE: ERROR_PIPE_CONNECTED is a rare edge case situation
+		nn_assert (err == ERROR_IO_PENDING || err == ERROR_PIPE_CONNECTED); // Success
+
+		/*  Notify the state machine. */
+#define NN_USOCK_ACTION_LISTEN 4
+		nn_fsm_action (&self->usock.fsm, NN_USOCK_ACTION_LISTEN);
+
+	}
+
+#else
     int rc;
     struct sockaddr_storage ss;
     struct sockaddr_un *un;
