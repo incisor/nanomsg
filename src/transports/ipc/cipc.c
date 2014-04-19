@@ -382,7 +382,75 @@ static void nn_cipc_handler (struct nn_fsm *self, int src, int type,
 static void nn_cipc_start_connecting (struct nn_cipc *self)
 {
 #if defined NN_HAVE_WINDOWS
-	nn_assert( TRUE );
+	const char *addr;
+	const char *win_name;
+
+	// TODO: transform the name
+	// http://msdn.microsoft.com/en-us/library/windows/desktop/aa365783(v=vs.85).aspx
+	addr = nn_epbase_getaddr (&self->epbase);
+	win_name = "\\\\.\\pipe\\test.ipc";
+
+	// nn_usock_start replacement:
+	// same as nn_bipc_start_listening - should probably become a nn_pipe_start
+	{
+		HANDLE instance;
+		HANDLE cp;
+		struct nn_worker *worker;
+
+		// TODO: expose custom nOutBufferSize, nInBufferSize, nDefaultTimeOut, lpSecurityAttributes
+		// NOTE: FILE_FLAG_OVERLAPPED + PIPE_WAIT: http://blogs.msdn.com/b/oldnewthing/archive/2011/01/14/10115610.aspx?Redirected=true
+		instance = CreateNamedPipeA ( win_name, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, NULL );
+		// TODO: error reporting
+		nn_assert (instance != INVALID_HANDLE_VALUE);
+		// FIXME: abuse. Since SOCKETs are HANDLEs, should we change the type to a HANDLE instead?
+		self->usock.s = (SOCKET)instance;
+
+		/*  Associate the socket with a worker thread/completion port. */
+		worker = nn_fsm_choose_worker (&self->usock.fsm);
+		cp = CreateIoCompletionPort ((HANDLE) self->usock.s,
+			nn_worker_getcp (worker), (ULONG_PTR) NULL, 0);
+		nn_assert (cp != NULL);
+
+		// TODO: should something else be setup here?
+		// http://msdn.microsoft.com/en-us/library/windows/desktop/ms740506(v=vs.85).aspx
+		// AF_* SOCK_* are for SOCKET code, meaningless for named pipe HANDLE ..
+		self->usock.domain = -1;
+		self->usock.type = -1;
+		self->usock.protocol = -1;
+
+		/*  Start the state machine. */
+		nn_fsm_start (&self->usock.fsm);
+	}
+
+	// nn_usock_connect replacement:
+	//nn_usock_connect (&self->usock, (struct sockaddr*) &ss, sizeof (struct sockaddr_un));
+	{
+		OVERLAPPED olpd;
+		BOOL connect_ret;
+		DWORD err;
+
+#define NN_USOCK_STATE_STARTING 2
+#define NN_USOCK_ACTION_CONNECT 5
+		nn_assert_state (&self->usock, NN_USOCK_STATE_STARTING);
+		nn_fsm_action (&self->usock.fsm, NN_USOCK_ACTION_CONNECT);
+
+		// http://msdn.microsoft.com/en-us/library/windows/desktop/aa365146(v=vs.85).aspx
+		// NOTE: not setting up a 'manual reset' event
+		memset (&olpd, 0, sizeof(OVERLAPPED));
+		connect_ret = ConnectNamedPipe ((HANDLE) self->usock.s, &olpd);
+		nn_assert (connect_ret == FALSE); // Asynchronous: always returns 0
+		err = GetLastError();
+		// NOTE: ERROR_PIPE_CONNECTED is a rare edge case situation
+		nn_assert (err == ERROR_IO_PENDING || err == ERROR_PIPE_CONNECTED); // Success
+
+		nn_worker_op_start (&self->usock.out, 0);
+	}
+
+	self->state  = NN_CIPC_STATE_CONNECTING;
+
+	nn_epbase_stat_increment (&self->epbase,
+		NN_STAT_INPROGRESS_CONNECTIONS, 1);
+
 #else
     int rc;
     struct sockaddr_storage ss;

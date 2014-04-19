@@ -292,7 +292,6 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 	win_name = "\\\\.\\pipe\\test.ipc";
 
 	// nn_usock_start replacement:
-
 	{
 		HANDLE instance;
 		HANDLE cp;
@@ -313,6 +312,8 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 		nn_assert (cp);
 
 		// TODO: should something else be setup here?
+		// http://msdn.microsoft.com/en-us/library/windows/desktop/ms740506(v=vs.85).aspx
+		// AF_* SOCK_* are for SOCKET code, meaningless for named pipe HANDLE ..
 		self->usock.domain = -1;
 		self->usock.type = -1;
 		self->usock.protocol = -1;
@@ -338,11 +339,11 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 		// NOTE: ERROR_PIPE_CONNECTED is a rare edge case situation
 		nn_assert (err == ERROR_IO_PENDING || err == ERROR_PIPE_CONNECTED); // Success
 
-		/*  Notify the state machine. */
-#define NN_USOCK_ACTION_LISTEN 4
-		nn_fsm_action (&self->usock.fsm, NN_USOCK_ACTION_LISTEN);
-
 	}
+
+	/*  Notify the state machine. */
+#define NN_USOCK_ACTION_LISTEN 4
+	nn_fsm_action (&self->usock.fsm, NN_USOCK_ACTION_LISTEN);
 
 #else
     int rc;
