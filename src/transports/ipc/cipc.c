@@ -425,7 +425,6 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 	// nn_usock_connect replacement:
 	//nn_usock_connect (&self->usock, (struct sockaddr*) &ss, sizeof (struct sockaddr_un));
 	{
-		OVERLAPPED olpd;
 		BOOL connect_ret;
 		DWORD err;
 
@@ -436,8 +435,12 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 
 		// http://msdn.microsoft.com/en-us/library/windows/desktop/aa365146(v=vs.85).aspx
 		// NOTE: not setting up a 'manual reset' event
-		memset (&olpd, 0, sizeof(OVERLAPPED));
-		connect_ret = ConnectNamedPipe ((HANDLE) self->usock.s, &olpd);
+
+		// NOTE: usock_win.inc does a memset before first use for the SOCKET cases,
+		// maybe it would be better to move those memsets to nn_worker_op_init?
+		memset (&self->usock.out.olpd, 0, sizeof(OVERLAPPED));
+
+		connect_ret = ConnectNamedPipe ((HANDLE) self->usock.s, &self->usock.out.olpd);
 		nn_assert (connect_ret == FALSE); // Asynchronous: always returns 0
 		err = GetLastError();
 		// NOTE: ERROR_PIPE_CONNECTED is a rare edge case situation

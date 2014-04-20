@@ -450,6 +450,7 @@ static void nn_usock_shutdown (struct nn_fsm *self, int src, int type,
               !nn_worker_op_isidle (&usock->out))
             return;
 finish1:
+		// FIXME TTimo in IPC we have a HANDLE here, not a SOCKET
         rc = closesocket (usock->s);
         wsa_assert (rc == 0);
 finish2:
