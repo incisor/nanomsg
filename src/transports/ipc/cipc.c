@@ -405,7 +405,7 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 
 		/*  Associate the socket with a worker thread/completion port. */
 		worker = nn_fsm_choose_worker (&self->usock.fsm);
-		cp = CreateIoCompletionPort ((HANDLE) self->usock.s,
+		cp = CreateIoCompletionPort (self->usock.p,
 			nn_worker_getcp (worker), (ULONG_PTR) NULL, 0);
 		nn_assert (cp != NULL);
 
@@ -435,7 +435,7 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 		// maybe it would be better to move those memsets to nn_worker_op_init?
 		memset (&self->usock.out.olpd, 0, sizeof(OVERLAPPED));
 
-		connect_ret = ConnectNamedPipe ((HANDLE) self->usock.s, &self->usock.out.olpd);
+		connect_ret = ConnectNamedPipe (self->usock.p, &self->usock.out.olpd);
 		nn_assert (connect_ret == FALSE); // Asynchronous: always returns 0
 		err = GetLastError();
 		// NOTE: ERROR_PIPE_CONNECTED is a rare edge case situation

@@ -305,7 +305,7 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 
 		/*  Associate the socket with a worker thread/completion port. */
 		worker = nn_fsm_choose_worker (&self->usock.fsm);
-		cp = CreateIoCompletionPort ((HANDLE) self->usock.s,
+		cp = CreateIoCompletionPort (self->usock.p,
 			nn_worker_getcp (worker), (ULONG_PTR) NULL, 0);
 		nn_assert (cp != NULL);
 
@@ -328,7 +328,7 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 		// http://msdn.microsoft.com/en-us/library/windows/desktop/aa365146(v=vs.85).aspx
 		// NOTE: not setting up a 'manual reset' event
 		memset (&olpd, 0, sizeof(OVERLAPPED));
-		connect_ret = ConnectNamedPipe ((HANDLE) self->usock.s, &olpd);
+		connect_ret = ConnectNamedPipe (self->usock.p, &olpd);
 		nn_assert (connect_ret == FALSE); // Asynchronous: always returns 0
 		err = GetLastError();
 		// NOTE: ERROR_PIPE_CONNECTED is a rare edge case situation
