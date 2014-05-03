@@ -25,14 +25,20 @@
 
 #include "../utils/win.h"
 
+static const int AF_NN_NAMEDPIPE = 256; /* Making one up with a value that doesn't collide with AF_* constants defined by Windows */
+
 struct nn_usock {
 
     /*  The state machine. */
     struct nn_fsm fsm;
     int state;
 
-    /*  The actual underlying socket. */
-    SOCKET s;
+	union {
+		/*  The actual underlying socket. Can be used as a HANDLE too. */
+		SOCKET s;
+		/*  Named pipe handle. Cannot be used as a SOCKET. For AF_NN_NAMEDPIPE domain */
+		HANDLE p;
+	};
 
     /*  Asynchronous operations being executed on the socket. */
     struct nn_worker_op in;

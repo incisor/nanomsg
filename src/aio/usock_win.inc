@@ -395,6 +395,7 @@ static void nn_usock_shutdown (struct nn_fsm *self, int src, int type,
     void *srcptr)
 {
     int rc;
+	BOOL brc;
     struct nn_usock *usock;
 
     usock = nn_cont (self, struct nn_usock, fsm);
@@ -450,9 +451,13 @@ static void nn_usock_shutdown (struct nn_fsm *self, int src, int type,
               !nn_worker_op_isidle (&usock->out))
             return;
 finish1:
-		// FIXME TTimo in IPC we have a HANDLE here, not a SOCKET
-        rc = closesocket (usock->s);
-        wsa_assert (rc == 0);
+        if ( usock->domain == AF_NN_NAMEDPIPE ) {
+            brc = CloseHandle (usock->p);
+            win_assert (brc);
+        } else {
+            rc = closesocket (usock->s);
+            wsa_assert (rc == 0);
+        }
 finish2:
         usock->state = NN_USOCK_STATE_IDLE;
         nn_fsm_stopped (&usock->fsm, NN_USOCK_STOPPED);

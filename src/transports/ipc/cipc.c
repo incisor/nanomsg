@@ -400,10 +400,8 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 		// TODO: expose custom nOutBufferSize, nInBufferSize, nDefaultTimeOut, lpSecurityAttributes
 		// NOTE: FILE_FLAG_OVERLAPPED + PIPE_WAIT: http://blogs.msdn.com/b/oldnewthing/archive/2011/01/14/10115610.aspx?Redirected=true
 		instance = CreateNamedPipeA ( win_name, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, NULL );
-		// TODO: error reporting
 		nn_assert (instance != INVALID_HANDLE_VALUE);
-		// FIXME: abuse. Since SOCKETs are HANDLEs, should we change the type to a HANDLE instead?
-		self->usock.s = (SOCKET)instance;
+		self->usock.p = instance;
 
 		/*  Associate the socket with a worker thread/completion port. */
 		worker = nn_fsm_choose_worker (&self->usock.fsm);
@@ -411,10 +409,7 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 			nn_worker_getcp (worker), (ULONG_PTR) NULL, 0);
 		nn_assert (cp != NULL);
 
-		// TODO: should something else be setup here?
-		// http://msdn.microsoft.com/en-us/library/windows/desktop/ms740506(v=vs.85).aspx
-		// AF_* SOCK_* are for SOCKET code, meaningless for named pipe HANDLE ..
-		self->usock.domain = -1;
+		self->usock.domain = AF_NN_NAMEDPIPE;
 		self->usock.type = -1;
 		self->usock.protocol = -1;
 
