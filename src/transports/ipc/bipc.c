@@ -293,6 +293,10 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 
 	// nn_usock_start replacement:
 	{
+#if 1
+		// Named Pipes don't have the concept of a listening socket
+		self->usock.p = NULL;
+#else
 		HANDLE instance;
 		HANDLE cp;
 		struct nn_worker *worker;
@@ -308,6 +312,7 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 		cp = CreateIoCompletionPort (self->usock.p,
 			nn_worker_getcp (worker), (ULONG_PTR) NULL, 0);
 		nn_assert (cp != NULL);
+#endif
 
 		self->usock.domain = AF_NN_NAMEDPIPE;
 		self->usock.type = -1;
@@ -319,6 +324,7 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 
 	// nn_usock_bind: no equivalent
 
+#if 0
 	// nn_usock_listen replacement:
 	{
 		OVERLAPPED olpd;
@@ -333,8 +339,8 @@ static void nn_bipc_start_listening (struct nn_bipc *self)
 		err = GetLastError();
 		// NOTE: ERROR_PIPE_CONNECTED is a rare edge case situation
 		nn_assert (err == ERROR_IO_PENDING || err == ERROR_PIPE_CONNECTED); // Success
-
 	}
+#endif
 
 	/*  Notify the state machine. */
 #define NN_USOCK_ACTION_LISTEN 4
