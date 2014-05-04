@@ -397,11 +397,19 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 		HANDLE cp;
 		struct nn_worker *worker;
 
+		// TODO: expose a way to pass lpSecurityAttributes
+		instance = CreateFile ( win_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_FLAG_OVERLAPPED, NULL );
+		win_assert (instance != INVALID_HANDLE_VALUE);
+
+		self->usock.p = instance;
+
+#if 0
 		// TODO: expose custom nOutBufferSize, nInBufferSize, nDefaultTimeOut, lpSecurityAttributes
 		// NOTE: FILE_FLAG_OVERLAPPED + PIPE_WAIT: http://blogs.msdn.com/b/oldnewthing/archive/2011/01/14/10115610.aspx?Redirected=true
 		instance = CreateNamedPipeA ( win_name, PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, PIPE_TYPE_BYTE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, NULL );
 		nn_assert (instance != INVALID_HANDLE_VALUE);
 		self->usock.p = instance;
+#endif
 
 		/*  Associate the socket with a worker thread/completion port. */
 		worker = nn_fsm_choose_worker (&self->usock.fsm);
@@ -428,6 +436,11 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 		nn_assert_state (&self->usock, NN_USOCK_STATE_STARTING);
 		nn_fsm_action (&self->usock.fsm, NN_USOCK_ACTION_CONNECT);
 
+		// FIXME
+		// Doing CreateFile to connect above .. but there is no OVERLAPPED .. it's in ReadFile/WriteFile calls ..
+		// So how do we start some kind of overlapped operation waiting for the connection to establish?
+
+#if 0
 		// http://msdn.microsoft.com/en-us/library/windows/desktop/aa365146(v=vs.85).aspx
 		// NOTE: not setting up a 'manual reset' event
 
@@ -442,6 +455,8 @@ static void nn_cipc_start_connecting (struct nn_cipc *self)
 		nn_assert (err == ERROR_IO_PENDING || err == ERROR_PIPE_CONNECTED); // Success
 
 		nn_worker_op_start (&self->usock.out, 0);
+#endif
+
 	}
 
 	self->state  = NN_CIPC_STATE_CONNECTING;
