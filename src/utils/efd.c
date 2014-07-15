@@ -67,9 +67,18 @@ int nn_efd_wait (struct nn_efd *self, int timeout)
         tv.tv_usec = timeout % 1000 * 1000;
     }
     rc = select (0, &self->fds, NULL, NULL, timeout >= 0 ? &tv : NULL);
+#if 0
     wsa_assert (rc != SOCKET_ERROR);
-    if (nn_slow (rc == 0))
-        return -ETIMEDOUT;
+	if (nn_slow (rc == 0))
+		return -ETIMEDOUT;
+#else // TMP - ipc_stress fails with a corrupted nn_efd coming in here
+	if (nn_slow (rc == SOCKET_ERROR)) {
+		return -nn_err_wsa_to_posix (WSAGetLastError ()); // ENOTSOCK
+	} else if (nn_slow (rc == 0)) {
+		return -ETIMEDOUT;
+	}
+
+#endif
     return 0;
 }
 

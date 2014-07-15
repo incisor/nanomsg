@@ -80,7 +80,7 @@ int main()
 	int bytes;
     struct nn_thread srv_thread;
     struct nn_thread cli_threads[THREAD_COUNT];
-    nn_atomic_init (&active, THREAD_COUNT);
+    nn_atomic_init(&active, THREAD_COUNT);
     /*  Stress the shutdown algorithm. */
     nn_thread_init(&srv_thread, server, NULL);
 

@@ -170,6 +170,8 @@ int nn_err_wsa_to_posix (int wsaerr)
         return ENOTCONN;
     case ERROR_NO_DATA:
         return EPIPE;
+	case WSAENOTSOCK:
+		return ENOTSOCK;
     default:
         nn_assert (0);
     }
