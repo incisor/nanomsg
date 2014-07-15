@@ -430,6 +430,7 @@ TRANSPORT_TESTS = \
     tests/inproc_shutdown \
     tests/ipc \
     tests/ipc_shutdown \
+    tests/ipc_flood \
     tests/tcp \
     tests/tcp_shutdown
 
