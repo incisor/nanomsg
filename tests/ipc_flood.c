@@ -31,30 +31,48 @@
 
 #define SOCKET_ADDRESS "ipc://test.ipc"
 
+#define BATCH_SEND 10
+
 int main ()
 {
 	int pub;
 	int sub;
 	int rc;
 	int counter;
-	int recv_counter;
+	int i;
+	int recv_tmp;
+	int recv_expect;
 
 	pub = test_socket (AF_SP, NN_PUB);
-	test_connect (pub, SOCKET_ADDRESS);
+	test_bind (pub, SOCKET_ADDRESS);
 
 	sub = test_socket (AF_SP, NN_SUB);
-	test_connect (sub, SOCKET_ADDRESS);
 	rc = nn_setsockopt (sub, NN_SUB, NN_SUB_SUBSCRIBE, "", 0);
-	nn_assert (rc == 0);
+	errno_assert (rc == 0);
+	test_connect (sub, SOCKET_ADDRESS);
 
-	counter = 666;
-	rc = nn_send (pub, &counter, sizeof(counter), 0 );
-	nn_assert (rc == sizeof(counter));
+	/* Wait for connection to establish. */
+	nn_sleep (10);
 
-	rc = nn_recv (sub, &recv_counter, sizeof(recv_counter), NN_DONTWAIT);
-	nn_assert (rc == sizeof(recv_counter));
+	counter = 0;
+	for (i=0; i<BATCH_SEND; i++) {
+		if (i==BATCH_SEND-1) {
+			/* Wait before sending the last one. */
+			nn_sleep(50);
+		}
+		rc = nn_send (pub, &counter, sizeof(counter), 0);
+		nn_assert (rc == sizeof(counter));
+		counter++;
+	}
 
-	nn_assert (recv_counter == counter);
+	recv_expect = 0;
+	for (i=0; i<BATCH_SEND; i++) {
+		rc = nn_recv (sub, &recv_tmp, sizeof(recv_tmp), 0);
+		nn_assert (rc == sizeof(recv_tmp));
+		/* Will get the first one, and the last one we waited on. Everything in between dropped. */
+		nn_assert (recv_expect == recv_tmp);
+		recv_expect++;
+	}
 
 	test_close (sub);
 	test_close (pub);
