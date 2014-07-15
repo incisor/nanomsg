@@ -34,6 +34,8 @@ enable_testing ()
 if (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     add_definitions (-DNN_HAVE_WINDOWS)
     add_definitions (-D_CRT_SECURE_NO_WARNINGS)
+    # when the library is static, turn off all dllimport/dllexport stuff, otherwise it'll cause unresolved
+    add_definitions (-DNN_NO_EXPORTS)
 
     if (MINGW)
         add_definitions (-DNN_HAVE_MINGW -DNN_HAVE_STDINT -D_WIN32_WINNT=0x0600)
