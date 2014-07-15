@@ -31,6 +31,13 @@ extern "C" {
 #include <errno.h>
 #include <stddef.h>
 
+/*  TTimo - Static link - best to force this for now for external programs. */
+#if defined _WIN32
+#   ifndef NN_NO_EXPORTS
+#       define NN_NO_EXPORTS
+#   endif
+#endif
+
 /*  Handle DSO symbol visibility                                             */
 #if defined NN_NO_EXPORTS
 #   define NN_EXPORT
