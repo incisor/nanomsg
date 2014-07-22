@@ -142,6 +142,7 @@ static void nn_worker_routine (void *arg)
     struct nn_worker_task *task;
     struct nn_worker_op *op;
     OVERLAPPED_ENTRY entries [NN_WORKER_MAX_EVENTS];
+	DWORD win_err;
 
     self = (struct nn_worker*) arg;
 
@@ -166,8 +167,19 @@ static void nn_worker_routine (void *arg)
         brc = GetQueuedCompletionStatusEx (self->cp, entries,
             NN_WORKER_MAX_EVENTS, &count, timeout < 0 ? INFINITE : timeout,
             FALSE);
-        if (nn_slow (!brc && GetLastError () == WAIT_TIMEOUT))
+        if (nn_slow (!brc && GetLastError () == WAIT_TIMEOUT)) {
+
+			/* NOTE: tried GetHandleInformation initially, but it didn't work */
+			/* FIXME: only do this when it's a named pipe. I have not seen an error when we abuse a SOCKET and do a PeekNamedPipe on it, but we shouldn't do that. */
+			brc = PeekNamedPipe (self->p, NULL, 0, NULL, NULL, NULL);
+			if ( !brc ) {
+				win_err = GetLastError ();
+				nn_assert( win_err == ERROR_INVALID_HANDLE || win_err == ERROR_BAD_PIPE );
+				/* TODO: how to cleanly get out of here */
+			}
+
             continue;
+		}
         win_assert (brc);
 
         for (i = 0; i != count; ++i) {

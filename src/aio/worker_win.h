@@ -57,6 +57,7 @@ int nn_worker_op_isidle (struct nn_worker_op *self);
 
 struct nn_worker {
     HANDLE cp;
+	HANDLE p;
     struct nn_timerset timerset;
     struct nn_thread thread;
 };
