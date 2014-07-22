@@ -175,6 +175,7 @@ static void nn_worker_routine (void *arg)
 			if ( !brc ) {
 				win_err = GetLastError ();
 				nn_assert (win_err == ERROR_INVALID_HANDLE || win_err == ERROR_BAD_PIPE);
+#if 0
 				/* GetQueuedCompletionStatusEx filled up the list of entries, even though it's a timeout */
 				nn_assert (count > 0);
 				for (i =0; i != count; ++i) {
@@ -187,6 +188,7 @@ static void nn_worker_routine (void *arg)
 					nn_fsm_feed (op->owner, op->src, NN_WORKER_OP_ERROR, op);
 					nn_ctx_leave (op->owner->ctx);
 				}
+#endif
 			}
 
             continue;
